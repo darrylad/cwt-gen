@@ -98,33 +98,18 @@ class CWTAnalyzer:
             return False
 
 
-def save_cursor_position():
-    """Save current cursor position"""
-    sys.stdout.write('\033[s')
-    sys.stdout.flush()
+def clear_lines(n):
+    """Clear n lines from terminal"""
+    for _ in range(n):
+        sys.stdout.write('\033[F')  # Move cursor up
+        sys.stdout.write('\033[K')  # Clear line
 
 
-def restore_cursor_position():
-    """Restore cursor to saved position"""
-    sys.stdout.write('\033[u')
-    sys.stdout.flush()
-
-
-def clear_from_cursor():
-    """Clear from cursor to end of screen"""
-    sys.stdout.write('\033[J')
-    sys.stdout.flush()
-
-
-def display_progress(current, total, current_file, recent_files, first_call=False):
+def display_progress(current, total, current_file, recent_files, lines_to_clear=0):
     """Display progress bar, current file, and recent files"""
-    if not first_call:
-        # Restore cursor to saved position and clear everything below
-        restore_cursor_position()
-        clear_from_cursor()
-    else:
-        # Save cursor position on first call (marks the starting point)
-        save_cursor_position()
+    # Clear previous output
+    if lines_to_clear > 0:
+        clear_lines(lines_to_clear)
     
     # Calculate progress
     percent = (current / total) * 100
@@ -132,20 +117,30 @@ def display_progress(current, total, current_file, recent_files, first_call=Fals
     filled = int(bar_length * current / total)
     bar = '█' * filled + '░' * (bar_length - filled)
     
+    # Build output
+    lines = []
+    
     # Show recent completed files (last 5)
-    print()
+    lines.append("")
     for file in recent_files:
-        print(f"  ✓ {file.name}")
+        lines.append(f"  ✓ {file.name}")
     
     # Show current file
-    print()
-    print(f"  ▶ {current_file.name}")
+    lines.append("")
+    lines.append(f"  ▶ {current_file.name}")
     
     # Show progress bar
-    print()
-    print(f"Progress: [{bar}] {current}/{total} ({percent:.1f}%)")
+    lines.append("")
+    lines.append(f"Progress: [{bar}] {current}/{total} ({percent:.1f}%)")
+    
+    # Print all lines
+    for line in lines:
+        print(line)
     
     sys.stdout.flush()
+    
+    # Return number of lines printed for next clear
+    return len(lines)
 
 
 def process_path(input_path, analyzer):
@@ -161,7 +156,7 @@ def process_path(input_path, analyzer):
         print(f"Processing 1 CSV file")
         
         recent_files = deque(maxlen=5)
-        display_progress(1, 1, input_path, recent_files, first_call=True)
+        lines_printed = display_progress(1, 1, input_path, recent_files)
         success = analyzer.process_csv_file(input_path, output_dir)
         
     elif input_path.is_dir():
@@ -180,12 +175,11 @@ def process_path(input_path, analyzer):
         print(f"Found {total} CSV files")
         
         recent_files = deque(maxlen=5)
-        first_call = True
+        lines_printed = 0
         
         for idx, csv_file in enumerate(csv_files, 1):
             # Display progress with current file
-            display_progress(idx, total, csv_file, recent_files, first_call=first_call)
-            first_call = False
+            lines_printed = display_progress(idx, total, csv_file, recent_files, lines_printed)
             
             # Maintain folder structure
             relative_path = csv_file.relative_to(input_path)
