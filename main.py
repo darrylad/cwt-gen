@@ -8,6 +8,9 @@ from datetime import datetime
 import sys
 from collections import deque
 
+# Version info
+__version__ = "1.0.0"
+
 class CWTAnalyzer:
     """Continuous Wavelet Transform analyzer for CSV files"""
     
@@ -196,17 +199,87 @@ def process_path(input_path, analyzer):
 
 
 def main():
+    # Custom description with examples
+    description = """
+CWT Analyzer - Generate RGB scalogram images from CSV files using Continuous Wavelet Transform.
+
+The program maps X, Y, Z columns to R, G, B channels respectively.
+All outputs are saved to the 'outputs/' folder maintaining the original folder structure.
+    """
+    
+    epilog = """
+Examples:
+  # Process a single CSV file
+  python main.py data.csv
+  
+  # Process all CSV files in a directory
+  python main.py /path/to/folder
+  
+  # Custom image resolution
+  python main.py data.csv --width 2048 --height 1024
+  
+  # Custom frequency resolution
+  python main.py data.csv --scales 256
+  
+  # All custom parameters
+  python main.py /path/to/folder --scales 256 --width 2048 --height 1024
+
+CSV Requirements:
+  - Must contain columns named: X, Y, Z
+  - First column is treated as time/index
+  
+Output:
+  - RGB PNG images: outputs/[path]/*_cwt.png
+  - Processing log: outputs/log.txt
+  
+For more information, visit: https://github.com/yourusername/cwt-gen
+    """
+    
     parser = argparse.ArgumentParser(
-        description='Perform CWT on CSV files and generate RGB images',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        prog='cwt-gen',
+        description=description,
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument('path', type=str, help='Path to CSV file or directory')
-    parser.add_argument('--scales', type=int, default=128, 
-                       help='Number of wavelet scales (frequency resolution)')
-    parser.add_argument('--width', type=int, default=1024,
-                       help='Output image width in pixels')
-    parser.add_argument('--height', type=int, default=512,
-                       help='Output image height in pixels')
+    
+    # Add version flag
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=f'%(prog)s {__version__}'
+    )
+    
+    # Required argument
+    parser.add_argument(
+        'path',
+        type=str,
+        help='Path to CSV file or directory containing CSV files'
+    )
+    
+    # Optional arguments
+    parser.add_argument(
+        '--scales',
+        type=int,
+        default=128,
+        metavar='N',
+        help='Number of wavelet scales for frequency resolution (default: 128)'
+    )
+    
+    parser.add_argument(
+        '--width',
+        type=int,
+        default=1024,
+        metavar='PIXELS',
+        help='Output image width in pixels (default: 1024)'
+    )
+    
+    parser.add_argument(
+        '--height',
+        type=int,
+        default=512,
+        metavar='PIXELS',
+        help='Output image height in pixels (default: 512)'
+    )
     
     args = parser.parse_args()
     
@@ -218,7 +291,7 @@ def main():
     # Write header to log
     with open(log_file, 'w') as f:
         f.write("=" * 80 + "\n")
-        f.write("CWT Analyzer Log\n")
+        f.write(f"CWT Analyzer v{__version__}\n")
         f.write(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write("=" * 80 + "\n")
         f.write(f"Input path: {args.path}\n")
